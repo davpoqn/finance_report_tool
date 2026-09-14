@@ -741,7 +741,14 @@ function extractBetweenMarkers(text, startMarker, endMarker) {
   if (e < 0) throw new Error(`"${endMarker}" 위치를 찾을 수 없습니다. 파일 구조가 변경되었을 수 있습니다.`);
   return { start: s, end: e, text: text.slice(s, e) };
 }
-
+// AGENDA 슬라이드의 "핵심 요약" 카드 중 CF 미리보기(기말시재) 부분만 교체
+function patchAgendaCfKpi(html, cfTokens) {
+  const re = /(<div class="kpi"><div class="lab">)(\d+)(월 기말시재 \(추정\)<\/div><div class="val">)[^<]*(<span class="won">억<\/span><\/div><span class="chg )[^"]*(">)[^<]*(<\/span><\/div>)/;
+  if (!re.test(html)) return html; // 형식이 다르면 건드리지 않고 그대로 둠
+  return html.replace(re, (m, p1, month, p3, p4, p5, p6) =>
+    `${p1}${month}${p3}${cfTokens.CF_EST_END_EOK}${p4}${cfTokens.CF_END_DELTA_DIR}${p5}${cfTokens.CF_END_DELTA_TEXT}${p6}`
+  );
+}
 function patchCfIntoHtml(baseHtml, cfTokens) {
   const tpl = decodeTemplateB64(TEMPLATE_B64);
 
@@ -765,6 +772,8 @@ function patchCfIntoHtml(baseHtml, cfTokens) {
   if (chartStartIdxBase < 0) throw new Error('업로드하신 HTML에서 CF 차트 스크립트 위치를 찾을 수 없습니다.');
   const chartEndIdxBase = patched.indexOf('\n  }\n', chartStartIdxBase) + '\n  }\n'.length;
   patched = patched.slice(0, chartStartIdxBase) + filledChartBlock + patched.slice(chartEndIdxBase);
+
+  patched = patchAgendaCfKpi(patched, cfTokens);
 
   return patched;
 }
